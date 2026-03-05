@@ -89,7 +89,7 @@
 //!   Unlike `-debug`, `-debug-log` doesn't work with stdout/stderr outputs.
 //!
 //! ## Features
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "doc", doc = document_features::document_features!())]
 
 use core::str;
