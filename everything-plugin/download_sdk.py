@@ -8,6 +8,15 @@ import requests
 from pathlib import Path
 import zipfile
 
+'''
+path = Path('../target/sdk/HTTP.zip')
+# zip = requests.get('http://www.voidtools.com/Everything-HTTP-Server-1.0.3.4.x64.zip')
+zip = requests.get('http://www.voidtools.com/Everything-ETP-Server-1.0.1.4.x64.zip')
+path.write_bytes(zip.content)
+with zipfile.ZipFile(path, 'r') as zip_ref:
+    zip_ref.extractall('../target/sdk')
+'''
+
 path = Path('../target/sdk/Everything-1.5-Plugin-SDK.zip')
 zip = requests.get('https://www.voidtools.com/Everything-1.5-Plugin-SDK.zip')
 path.write_bytes(zip.content)
