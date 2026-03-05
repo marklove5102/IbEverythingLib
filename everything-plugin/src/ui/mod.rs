@@ -26,6 +26,7 @@ use windows_sys::Win32::{
 use crate::{PluginApp, PluginHandler, PluginHost, sys};
 
 #[cfg(feature = "winio")]
+#[cfg_attr(feature = "winio-07", path = "winio_07.rs")]
 pub mod winio;
 
 /// TODO: Icon?
@@ -81,17 +82,20 @@ impl<A: PluginApp> OptionsPageInternalMessage<A> {
                 debug!(?v, "OptionsPageInternalMessage::Size");
                 // We do not use `SWP_NOMOVE` to mitigate the occasional misplacement bug by the way, see `winio::adjust_window` for details.
                 unsafe { SetWindowPos(window, 0 as _, 0, 0, v.0, v.1, SWP_NOZORDER) };
-                None
+                Some(OptionsPageMessage::Redraw)
             }
             OptionsPageInternalMessage::Kill => {
                 unsafe { SendMessageW(window, WM_CLOSE, 0, 0) };
-                None
+                Some(OptionsPageMessage::Close)
             }
         }
     }
 }
 
 pub enum OptionsPageMessage<A: PluginApp> {
+    Redraw,
+    Close,
+
     /// `(config, tx)`
     ///
     /// Just drop the `tx` if there is no need to save the config (i.e. no changes).
@@ -106,6 +110,8 @@ pub enum OptionsPageMessage<A: PluginApp> {
 impl<A: PluginApp> Debug for OptionsPageMessage<A> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OptionsPageMessage::Redraw => write!(f, "OptionsPageMessage::Redraw"),
+            OptionsPageMessage::Close => write!(f, "OptionsPageMessage::Close"),
             OptionsPageMessage::Save(_config, _tx) => write!(f, "OptionsPageMessage::Save"),
         }
     }

@@ -1,6 +1,6 @@
 [package]
 name = "everything-plugin"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2024"
 description = "Rust binding for Everything's plugin SDK"
 authors.workspace = true
@@ -26,6 +26,8 @@ ui = ["dep:futures-channel", "dep:futures-util"]
 
 ## Make options pages GUI using [Winio](https://github.com/compio-rs/winio) in MVU (Elm) architecture
 winio = ["ui", "dep:winio"]
+## Winio >=0.7.2,<0.8 (v0.7.2 has breaking changes)
+winio-07 = ["winio"]
 ## Enable dark mode support in Winio
 ## 
 ## 1214 -> 1233 KiB
@@ -62,7 +64,7 @@ windows-sys = { version = "0.59", features = [
 
 [dependencies.winio]
 # v0.7.2 has breaking changes
-version = ">=0.7.2,<0.8"
+version = ">=0.7.2,<0.11"
 default-features = false
 features = ["win32"]
 optional = true
@@ -97,7 +99,7 @@ features = ["tracing", "serde", "ui", "winio", "rust-i18n", "doc"]
 #
 # To test this locally, run:
 # ```
-# RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features
-# $env:RUSTDOCFLAGS="--cfg docsrs"; cargo +nightly doc --all-features
+# RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --features tracing,serde,ui,winio,rust-i18n,doc
+# $env:RUSTDOCFLAGS="--cfg docsrs"; cargo +nightly doc --features tracing,serde,ui,winio,rust-i18n,doc
 # ```
 rustdoc-args = ["--cfg", "docsrs"]

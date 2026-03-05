@@ -1,23 +1,27 @@
 //! https://github.com/compio-rs/winio/blob/ca97049907a0151168100365ce5e13410f508792/winio/examples/widgets.rs
 //!
 //! Legacy style: https://github.com/Chaoses-Ib/IbEverythingLib/blob/c8e6e5f175cff2b4ff2e93acf4c265e9c59ddb39/everything-plugin/examples/test/widgets.rs
+#![allow(unused_must_use)]
 
 use everything_plugin::ui::winio::prelude::*;
 
 use crate::{App, HANDLER};
 
 #[allow(dead_code)]
-fn main() {
+pub fn main() {
     // #[cfg(feature = "enable_log")]
     // tracing_subscriber::fmt()
     //     .with_max_level(compio_log::Level::INFO)
     //     .init();
 
-    winio::ui::App::new("rs.compio.winio.widgets").run::<MainModel>(());
+    winio::ui::App::new("rs.compio.winio.widgets")
+        .unwrap()
+        .run::<MainModel>(())
+        .unwrap();
 }
 
 pub struct MainModel {
-    window: Child<Window>,
+    window: Child<View>,
     ulabel: Child<Label>,
     plabel: Child<Label>,
     uentry: Child<Edit>,
@@ -27,9 +31,7 @@ pub struct MainModel {
     combo: Child<ComboBox>,
     list: Child<ObservableVec<String>>,
     index: Option<usize>,
-    r1: Child<RadioButton>,
-    r2: Child<RadioButton>,
-    r3: Child<RadioButton>,
+    radio_group: Child<RadioButtonGroup>,
     rindex: usize,
     push_button: Child<Button>,
     pop_button: Child<Button>,
@@ -41,8 +43,6 @@ pub struct MainModel {
 #[derive(Debug)]
 pub enum MainMessage {
     Noop,
-    Close,
-    Redraw,
     List(ObservableVecEvent<String>),
     Select,
     Push,
@@ -63,73 +63,65 @@ impl Component for MainModel {
     type Event = ();
     type Init<'a> = OptionsPageInit<'a, App>;
     type Message = MainMessage;
+    type Error = Error;
 
-    fn init(mut init: Self::Init<'_>, sender: &ComponentSender<Self>) -> Self {
+    async fn init(
+        mut init: Self::Init<'_>,
+        sender: &ComponentSender<Self>,
+    ) -> Result<Self, Self::Error> {
         // let mut window = Child::<Window>::init(init);
-        let mut window = init.window(sender);
-        window.set_text("Widgets example");
+        let mut window = init.window(sender).await?;
+        // window.set_text("Widgets example");
         window.set_size(Size::new(800.0, 600.0));
-        init! {
-            canvas: Canvas = (&window),
-            ulabel: Label = (&window) => {
-                text: "Username:",
-                halign: HAlign::Right,
-            },
-            plabel: Label = (&window) => {
-                text: "Password:",
-                halign: HAlign::Right,
-            },
-            uentry: Edit = (&window) => {
-                text: "AAA",
-            },
-            pentry: Edit = (&window) => {
-                text: "123456",
-                password: true,
-            },
-            pcheck: CheckBox = (&window) => {
-                text: "Show",
-                checked: false,
-            },
-            combo: ComboBox = (&window),
-            list: ObservableVec<String> = (()) => {
-                // https://www.zhihu.com/question/23600507/answer/140640887
-                items: [
-                    "烫烫烫",
-                    "昍昍昍",
-                    "ﾌﾌﾌﾌﾌﾌ",
-                    "쳌쳌쳌"
-                ],
-            },
-            r1: RadioButton = (&window) => {
-                text: "屯屯屯",
-                checked: true,
-            },
-            r2: RadioButton = (&window) => {
-                text: "锟斤拷",
-            },
-            r3: RadioButton = (&window) => {
-                text: "╠╠╠"
-            },
-            push_button: Button = (&window) => {
-                text: "Push",
-            },
-            pop_button: Button = (&window) => {
-                text: "Pop",
-            },
-            show_button: Button = (&window) => {
-                text: "Show",
-            },
-            progress: Progress = (&window) => {
-                indeterminate: true,
-            },
-            mltext: TextBox = (&window) => {
-            },
-        }
+
+        let canvas = Child::<Canvas>::init(&window).await?;
+        let mut ulabel = Child::<Label>::init(&window).await?;
+        ulabel.set_text("Username:");
+        ulabel.set_halign(HAlign::Right);
+        let mut plabel = Child::<Label>::init(&window).await?;
+        plabel.set_text("Password:");
+        plabel.set_halign(HAlign::Right);
+        let mut uentry = Child::<Edit>::init(&window).await?;
+        uentry.set_text("AAA");
+        let mut pentry = Child::<Edit>::init(&window).await?;
+        pentry.set_text("123456");
+        pentry.set_password(true);
+        let mut pcheck = Child::<CheckBox>::init(&window).await?;
+        pcheck.set_text("Show");
+        pcheck.set_checked(false);
+        let combo = Child::<ComboBox>::init(&window).await?;
+        let mut list = Child::<ObservableVec<String>>::init(Vec::new())
+            .await
+            .unwrap();
+        // https://www.zhihu.com/question/23600507/answer/140640887
+        list.push("烫烫烫".to_string());
+        list.push("昍昍昍".to_string());
+        list.push("ﾌﾌﾌﾌﾌﾌ".to_string());
+        list.push("쳌쳌쳌".to_string());
+        let mut r1 = Child::<RadioButton>::init(&window).await?;
+        r1.set_text("屯屯屯");
+        r1.set_checked(true);
+        let mut r2 = Child::<RadioButton>::init(&window).await?;
+        r2.set_text("锟斤拷");
+        let mut r3 = Child::<RadioButton>::init(&window).await?;
+        r3.set_text("╠╠╠");
+        // Initialize radio group with the radio buttons
+        let radio_group = Child::<RadioButtonGroup>::init(vec![r1, r2, r3]).await?;
+
+        let mut push_button = Child::<Button>::init(&window).await?;
+        push_button.set_text("Push");
+        let mut pop_button = Child::<Button>::init(&window).await?;
+        pop_button.set_text("Pop");
+        let mut show_button = Child::<Button>::init(&window).await?;
+        show_button.set_text("Show");
+        let mut progress = Child::<Progress>::init(&window).await?;
+        progress.set_indeterminate(true);
+        let mut mltext = Child::<TextBox>::init(&window).await?;
         HANDLER.with_app(|a| mltext.set_text(&a.config().s));
 
         window.show();
 
-        Self {
+        Ok(Self {
             window,
             ulabel,
             plabel,
@@ -140,26 +132,19 @@ impl Component for MainModel {
             combo,
             list,
             index: None,
-            r1,
-            r2,
-            r3,
+            radio_group,
             rindex: 0,
             push_button,
             pop_button,
             show_button,
             progress,
             mltext,
-        }
+        })
     }
 
     async fn start(&mut self, sender: &ComponentSender<Self>) -> ! {
-        let mut radio_group = RadioButtonGroup::new([&mut *self.r1, &mut self.r2, &mut self.r3]);
         start! {
             sender, default: MainMessage::Noop,
-            self.window => {
-                WindowEvent::Close => MainMessage::Close,
-                WindowEvent::Resize => MainMessage::Redraw,
-            },
             self.pcheck => {
                 CheckBoxEvent::Click => MainMessage::PasswordCheck,
             },
@@ -178,45 +163,40 @@ impl Component for MainModel {
             self.list => {
                 e => MainMessage::List(e),
             },
-            radio_group => {
-                |i| Some(MainMessage::RSelect(i))
+            self.radio_group => {
+                RadioButtonGroupEvent::Click(i) => MainMessage::RSelect(i)
             }
         }
     }
 
-    async fn update(&mut self, message: Self::Message, sender: &ComponentSender<Self>) -> bool {
-        futures_util::future::join(self.window.update(), self.canvas.update()).await;
-        match message {
+    async fn update_children(&mut self) -> Result<bool, Self::Error> {
+        update_children!(self.window, self.canvas, self.radio_group)
+    }
+
+    async fn update(
+        &mut self,
+        message: Self::Message,
+        sender: &ComponentSender<Self>,
+    ) -> Result<bool, Self::Error> {
+        // futures_util::future::join(self.window.update(), self.canvas.update()).await;
+        Ok(match message {
             MainMessage::Noop => false,
-            MainMessage::Close => {
-                sender.output(());
-                false
-            }
-            MainMessage::Redraw => true,
             MainMessage::PasswordCheck => {
-                self.pentry.set_password(!self.pcheck.is_checked());
+                self.pentry.set_password(!self.pcheck.is_checked()?);
                 true
             }
             MainMessage::List(e) => {
                 self.pop_button.set_enabled(!self.list.is_empty());
                 self.combo
                     .emit(ComboBoxMessage::from_observable_vec_event(e))
-                    .await
+                    .await?
             }
             MainMessage::Select => {
-                self.index = self.combo.selection();
+                self.index = self.combo.selection()?;
                 false
             }
             MainMessage::Push => {
-                self.list.push(
-                    match self.rindex {
-                        0 => &self.r1,
-                        1 => &self.r2,
-                        2 => &self.r3,
-                        _ => unreachable!(),
-                    }
-                    .text(),
-                );
+                self.list.push(self.radio_group[self.rindex].text()?);
                 false
             }
             MainMessage::Pop => {
@@ -237,25 +217,31 @@ impl Component for MainModel {
                             .unwrap_or("No selection."),
                     )
                     .buttons(MessageBoxButton::Ok)
-                    .show(&self.window)
+                    // https://github.com/compio-rs/winio/issues/105
+                    .show(unsafe { BorrowedWindow::win32(self.window.as_container().as_win32()) })
                     .await;
                 false
             }
             MainMessage::OptionsPage(m) => {
                 tracing::debug!(?m, "Options page message");
                 match m {
+                    OptionsPageMessage::Redraw => true,
+                    OptionsPageMessage::Close => {
+                        sender.output(());
+                        false
+                    }
                     OptionsPageMessage::Save(config, tx) => {
-                        config.s = self.mltext.text();
-                        tx.send(config).unwrap()
+                        config.s = self.mltext.text()?;
+                        tx.send(config).unwrap();
+                        false
                     }
                 }
-                false
             }
-        }
+        })
     }
 
-    fn render(&mut self, _sender: &ComponentSender<Self>) {
-        let csize = self.window.client_size();
+    fn render(&mut self, _sender: &ComponentSender<Self>) -> Result<(), Self::Error> {
+        let csize = self.window.size()?;
         {
             let mut cred_panel = layout! {
                 Grid::from_str("auto,1*,auto", "1*,auto,auto,1*").unwrap(),
@@ -266,12 +252,10 @@ impl Component for MainModel {
                 self.pcheck => { column: 2, row: 2 },
             };
 
-            let mut rgroup_panel = layout! {
-                Grid::from_str("auto", "1*,auto,auto,auto,1*").unwrap(),
-                self.r1 => { row: 1 },
-                self.r2 => { row: 2 },
-                self.r3 => { row: 3 },
-            };
+            let mut rgroup_panel = Grid::from_str("auto", "1*,auto,auto,auto,1*").unwrap();
+            for (i, rb) in self.radio_group.iter_mut().enumerate() {
+                rgroup_panel.push(rb).row(i + 1).finish();
+            }
 
             let mut buttons_panel = layout! {
                 StackPanel::new(Orient::Vertical),
@@ -294,8 +278,8 @@ impl Component for MainModel {
             root_panel.set_size(csize);
         }
 
-        let size = self.canvas.size();
-        let is_dark = ColorTheme::current() == ColorTheme::Dark;
+        let size = self.canvas.size()?;
+        let is_dark = ColorTheme::current()? == ColorTheme::Dark;
         let back_color = if is_dark {
             Color::new(255, 255, 255, 255)
         } else {
@@ -303,7 +287,7 @@ impl Component for MainModel {
         };
         let brush = SolidColorBrush::new(back_color);
         let pen = BrushPen::new(&brush, 1.0);
-        let mut ctx = self.canvas.context();
+        let mut ctx = self.canvas.context()?;
         let cx = size.width / 2.0;
         let cy = size.height / 2.0;
         let r = cx.min(cy) - 2.0;
@@ -331,7 +315,7 @@ impl Component for MainModel {
             ),
             Size::new(r / 10.0, r / 10.0),
         );
-        let mut path = ctx.create_path_builder(Point::new(cx + r + 1.0 - r / 10.0, cy));
+        let mut path = ctx.create_path_builder(Point::new(cx + r + 1.0 - r / 10.0, cy))?;
         path.add_arc(
             Point::new(cx, cy + r * 0.618 + 1.0),
             Size::new(r + 1.0 - r / 10.0, r * 0.382 / 2.0),
@@ -340,7 +324,7 @@ impl Component for MainModel {
             true,
         );
         path.add_line(Point::new(cx - r - 1.0 + r / 10.0, cy));
-        let path = path.build(false);
+        let path = path.build(false)?;
         ctx.draw_path(&pen, &path);
         let brush3 = RadialGradientBrush::new(
             [
@@ -361,5 +345,6 @@ impl Component for MainModel {
             .valign(VAlign::Bottom)
             .build();
         ctx.draw_str(&brush3, font, Point::new(cx, cy), "Hello world!");
+        Ok(())
     }
 }

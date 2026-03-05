@@ -1,9 +1,10 @@
+#![allow(unused_must_use)]
 use everything_plugin::ui::winio::prelude::*;
 
 use crate::{App, HANDLER, Mode};
 
 pub struct MainModel {
-    window: Child<Window>,
+    window: Child<View>,
     enabled: Child<CheckBox>,
     b: Child<CheckBox>,
     s_label: Child<Label>,
@@ -15,8 +16,6 @@ pub struct MainModel {
 #[derive(Debug)]
 pub enum MainMessage {
     Noop,
-    Close,
-    Redraw,
     EnabledClick,
     OptionsPage(OptionsPageMessage<App>),
 }
@@ -31,26 +30,30 @@ impl Component for MainModel {
     type Event = ();
     type Init<'a> = OptionsPageInit<'a, App>;
     type Message = MainMessage;
+    type Error = Error;
 
-    fn init(mut init: Self::Init<'_>, sender: &ComponentSender<Self>) -> Self {
-        let mut window = init.window(sender);
+    async fn init(
+        mut init: Self::Init<'_>,
+        sender: &ComponentSender<Self>,
+    ) -> Result<Self, Self::Error> {
+        let mut window = init.window(sender).await?;
         // window.set_size(Size::new(800.0, 600.0));
 
-        let mut enabled = Child::<CheckBox>::init(&window);
+        let mut enabled = Child::<CheckBox>::init(&window).await?;
         enabled.set_text("Enable");
 
-        let mut b = Child::<CheckBox>::init(&window);
+        let mut b = Child::<CheckBox>::init(&window).await?;
         b.set_text("Switch");
 
-        let mut e_label = Child::<Label>::init(&window);
+        let mut e_label = Child::<Label>::init(&window).await?;
         e_label.set_text("Mode:");
-        let mut e = Child::<ComboBox>::init(&window);
+        let mut e = Child::<ComboBox>::init(&window).await?;
         e.insert(0, "A");
         e.insert(1, "B");
 
-        let mut s_label = Child::<Label>::init(&window);
+        let mut s_label = Child::<Label>::init(&window).await?;
         s_label.set_text("Message:");
-        let mut s = Child::<Edit>::init(&window);
+        let mut s = Child::<Edit>::init(&window).await?;
 
         HANDLER.with_app(|a| {
             let config = a.config();
@@ -58,10 +61,10 @@ impl Component for MainModel {
             enabled.set_checked(config.enabled);
             b.set_checked(config.b);
 
-            e.set_selection(Some(match config.e {
+            e.set_selection(match config.e {
                 Mode::A => 0,
                 Mode::B => 1,
-            }));
+            });
 
             s.set_text(&config.s);
         });
@@ -70,7 +73,7 @@ impl Component for MainModel {
 
         window.show();
 
-        Self {
+        Ok(Self {
             window,
             enabled,
             b,
@@ -78,33 +81,33 @@ impl Component for MainModel {
             s,
             e_label,
             e,
-        }
+        })
     }
 
     async fn start(&mut self, sender: &ComponentSender<Self>) -> ! {
         start! {
             sender, default: MainMessage::Noop,
-            self.window => {
-                WindowEvent::Close => MainMessage::Close,
-                WindowEvent::Resize => MainMessage::Redraw,
-            },
             self.enabled => {
                 CheckBoxEvent::Click => MainMessage::EnabledClick
-            }
+            },
+            self.b => {}
         }
     }
 
-    async fn update(&mut self, message: Self::Message, sender: &ComponentSender<Self>) -> bool {
-        futures_util::join!(self.window.update());
-        match message {
+    async fn update_children(&mut self) -> Result<bool, Self::Error> {
+        update_children!(self.window)
+    }
+
+    async fn update(
+        &mut self,
+        message: Self::Message,
+        sender: &ComponentSender<Self>,
+    ) -> Result<bool, Self::Error> {
+        // futures_util::join!(self.window.update());
+        Ok(match message {
             MainMessage::Noop => false,
-            MainMessage::Close => {
-                sender.output(());
-                false
-            }
-            MainMessage::Redraw => true,
             MainMessage::EnabledClick => {
-                let enabled = self.enabled.is_checked();
+                let enabled = self.enabled.is_checked()?;
                 self.b.set_enabled(enabled);
                 self.e.set_enabled(enabled);
                 self.s.set_enabled(enabled);
@@ -113,27 +116,32 @@ impl Component for MainModel {
             MainMessage::OptionsPage(m) => {
                 tracing::debug!(?m, "Options page message");
                 match m {
+                    OptionsPageMessage::Redraw => true,
+                    OptionsPageMessage::Close => {
+                        sender.output(());
+                        false
+                    }
                     OptionsPageMessage::Save(config, tx) => {
-                        config.enabled = self.enabled.is_checked();
-                        config.b = self.b.is_checked();
-                        config.e = match self.e.selection() {
+                        config.enabled = self.enabled.is_checked()?;
+                        config.b = self.b.is_checked()?;
+                        config.e = match self.e.selection()? {
                             Some(0) => Mode::A,
                             Some(1) => Mode::B,
                             _ => Default::default(),
                         };
-                        config.s = self.s.text();
-                        tx.send(config).unwrap()
+                        config.s = self.s.text()?;
+                        tx.send(config).unwrap();
+                        false
                     }
                 }
-                false
             }
-        }
+        })
     }
 
-    fn render(&mut self, _sender: &ComponentSender<Self>) {
+    fn render(&mut self, _sender: &ComponentSender<Self>) -> Result<(), Self::Error> {
         self.window.render();
 
-        let csize = self.window.client_size();
+        let csize = self.window.size()?;
 
         let m = Margin::new(5., 0., 5., 0.);
         let m_l = Margin::new(0., 5., 0., 0.);
@@ -153,5 +161,6 @@ impl Component for MainModel {
             form => { column: 0, row: 2, margin: m },
         };
         grid.set_size(csize);
+        Ok(())
     }
 }

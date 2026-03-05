@@ -3,6 +3,8 @@
 //!
 //! Dynamic component management: https://github.com/compio-rs/winio/issues/28
 
+use std::mem;
+
 use futures_channel::mpsc;
 use futures_util::StreamExt;
 use tracing::debug;
@@ -15,9 +17,7 @@ pub use winio;
 pub mod prelude {
     pub use super::{super::OptionsPageMessage, OptionsPageInit};
     pub use crate::PluginApp;
-    // pub use winio::prelude::*;
-    // Do not use Result
-    pub use winio::{Error, elm::*, handle::*, layout::*, primitive::*, ui::*, widgets::*};
+    pub use winio::prelude::*;
 }
 use prelude::*;
 
@@ -39,32 +39,29 @@ where
 
 pub fn spawn<'a, T: OptionsPageComponent<'a>>(args: OptionsPageLoadArgs) -> PageHandle<T::App> {
     // *c_void, HWND: !Send
-    let parent: usize = args.parent as usize;
+    let parent: usize = unsafe { mem::transmute(args.parent) };
 
     let (tx, rx) = mpsc::unbounded();
     let thread_handle = std::thread::spawn(move || {
-        let parent: HWND = parent as HWND;
+        let parent: HWND = unsafe { mem::transmute(parent) };
         run::<T>(OptionsPageInit {
-            parent: unsafe { BorrowedContainer::win32(parent) },
+            parent: unsafe { BorrowedWindow::borrow_raw(RawWindow::Win32(parent)) }.into(),
             rx: Some(rx),
-        })
-        .ok();
+        });
         // widgets::main(page_hwnd)
     });
     PageHandle { thread_handle, tx }
 }
 
-pub fn run<'a, T: OptionsPageComponent<'a>>(
-    init: OptionsPageInit<'a, T::App>,
-) -> Result<T::Event, T::Error> {
+pub fn run<'a, T: OptionsPageComponent<'a>>(init: OptionsPageInit<'a, T::App>) -> T::Event {
     // The name is only used on Qt and GTK
     // https://github.com/compio-rs/winio/commit/f25828cc80fc5a39e188e7ed1c158f53ea9b5d56
-    App::new("").unwrap().run::<T>(init)
+    App::new("").run::<T>(init)
 }
 
 pub struct OptionsPageInit<'a, A: PluginApp> {
     /// `MaybeBorrowedWindow`: !Clone
-    parent: BorrowedContainer<'a>,
+    parent: Option<BorrowedWindow<'a>>,
 
     /// Workaround for listening to external messages.
     ///
@@ -75,7 +72,7 @@ pub struct OptionsPageInit<'a, A: PluginApp> {
 impl<'a, A: PluginApp> From<()> for OptionsPageInit<'a, A> {
     fn from(_: ()) -> Self {
         Self {
-            parent: unsafe { BorrowedContainer::win32(Default::default()) },
+            parent: None,
             rx: None,
         }
     }
@@ -83,32 +80,32 @@ impl<'a, A: PluginApp> From<()> for OptionsPageInit<'a, A> {
 
 impl<'a, A: PluginApp> OptionsPageInit<'a, A> {
     /// Do not call `set_size()` after calling this in `init()`, otherwise the initial size will be overridden.
-    pub async fn window<T: OptionsPageComponent<'a, App = A>>(
+    pub fn window<T: OptionsPageComponent<'a, App = A>>(
         &mut self,
         sender: &ComponentSender<T>,
-    ) -> Result<Child<View>, Error> {
-        let mut window = Child::<View>::init(self.parent.clone()).await?;
+    ) -> Child<Window> {
+        let mut window = Child::<Window>::init(self.parent.clone());
         self.init(&mut window, sender);
-        Ok(window)
+        window
     }
 
     /// Do not call `set_size()` after calling this in `init()`, otherwise the initial size will be overridden.
     pub fn init<T: OptionsPageComponent<'a, App = A>>(
         &mut self,
-        window: &mut View,
+        window: &mut Window,
         sender: &ComponentSender<T>,
     ) {
         // Put before spawn to avoid unnecessary runtime check
-        // adjust_window(window);
+        adjust_window(window);
 
         if let Some(mut rx) = self.rx.take() {
-            let window = window.as_container().as_win32();
+            let window = window.as_raw_window();
             let sender = sender.clone();
             winio::compio::runtime::spawn(async move {
                 // We cannot defer initial size setting because `set_size()` will run this task many times
                 // See https://github.com/compio-rs/compio/issues/459
                 while let Some(m) = rx.next().await {
-                    if let Some(m) = m.try_into(window) {
+                    if let Some(m) = m.try_into(window.as_win32()) {
                         debug!(?m, "Options page message");
                         sender.post(m.into());
                     }
@@ -123,11 +120,10 @@ impl<'a, A: PluginApp> OptionsPageInit<'a, A> {
 /// Adjust a window to be used in an options page.
 ///
 /// Should be called in [`Component::init`] for the window.
-#[allow(unused_must_use)]
 pub fn adjust_window(window: &mut Window) {
     // Btw, if `window` is Window instead of &mut:
     // error[E0502]: cannot borrow `window` as immutable because it is also borrowed as mutable
-    window.set_style(window.style().unwrap() & !WS_OVERLAPPEDWINDOW);
+    window.set_style(window.style() & !WS_OVERLAPPEDWINDOW);
 
     // TODO: Transparent background / background color
 
