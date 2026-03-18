@@ -1,4 +1,6 @@
-//! Rust binding for Everything's IPC SDK.
+/*!
+A Rust implementation of Everything's IPC SDK.
+*/
 //!
 //! ## Features
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -11,6 +13,9 @@ use windows_sys::Win32::{
     System::Threading::GetCurrentThreadId,
     UI::WindowsAndMessaging::{EnumThreadWindows, GetClassNameW, SendMessageW, WM_USER},
 };
+
+pub mod pipe;
+mod windows;
 
 const IPC_CLASS_PREFIX: &U16Str = u16str!("EVERYTHING_TASKBAR_NOTIFICATION");
 

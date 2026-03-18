@@ -3,4 +3,4 @@
 [![Documentation](https://docs.rs/everything-ipc/badge.svg)](https://docs.rs/everything-ipc)
 [![License](https://img.shields.io/crates/l/everything-ipc.svg)](../LICENSE.txt)
 
-Rust binding for Everything's IPC SDK.
+A Rust implementation of Everything's IPC SDK.

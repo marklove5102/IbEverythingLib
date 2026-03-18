@@ -1,4 +1,11 @@
 # IbEverythingLib
+## [everything-ipc](everything-ipc/README.md)
+[![crates.io](https://img.shields.io/crates/v/everything-ipc.svg)](https://crates.io/crates/everything-ipc)
+[![Documentation](https://docs.rs/everything-ipc/badge.svg)](https://docs.rs/everything-ipc)
+[![License](https://img.shields.io/crates/l/everything-ipc.svg)](LICENSE.txt)
+
+A Rust implementation of Everything's IPC SDK.
+
 ## [everything-plugin](everything-plugin/README.md)
 [![crates.io](https://img.shields.io/crates/v/everything-plugin.svg)](https://crates.io/crates/everything-plugin)
 [![Documentation](https://docs.rs/everything-plugin/badge.svg)](https://docs.rs/everything-plugin)
