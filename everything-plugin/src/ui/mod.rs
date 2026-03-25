@@ -19,7 +19,7 @@ use windows_sys::Win32::{
     Foundation::HWND,
     UI::WindowsAndMessaging::{
         GA_ROOT, GetAncestor, SWP_NOZORDER, SendMessageW, SetWindowPos, WM_CLOSE, WM_CREATE,
-        WM_CTLCOLORDLG, WM_MOVE, WM_PARENTNOTIFY, WM_SIZE,
+        WM_CTLCOLORDLG, WM_LBUTTONDOWN, WM_MOVE, WM_PARENTNOTIFY, WM_SIZE,
     },
 };
 
@@ -294,6 +294,11 @@ impl<A: PluginApp> PluginHandler<A> {
                         // Only works when switching to the page after loading the options window
                         // self.host()
                         //     .ui_options_enable_or_disable_apply_button(options_hwnd, true);
+                    }
+                    WM_LBUTTONDOWN => {
+                        // Only works when using a child window (winio::View on v0.9+)
+                        self.host()
+                            .ui_options_enable_or_disable_apply_button(options_hwnd, true);
                     }
                     _ => (),
                 }
